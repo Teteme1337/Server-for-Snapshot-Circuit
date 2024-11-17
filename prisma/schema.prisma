@@ -1,0 +1,62 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./data.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Users {
+  id                 Int                  @id @default(autoincrement())
+  email              String
+  password           String
+  avatar             String?
+  favorite_component FavoriteComponents[]
+}
+
+model Components {
+  id                   Int                   @id @default(autoincrement())
+  title                String
+  component_photo      String
+  description          String
+  documentation_name   String
+  favorite_component   FavoriteComponents[]
+  component_properties ComponentProperties[]
+  subtype              ComponentSubtype      @relation(fields: [subtype_id], references: [id])
+  subtype_id           Int
+}
+
+model FavoriteComponents {
+  user    Users @relation(fields: [user_id], references: [id])
+  user_id Int
+
+  component    Components @relation(fields: [component_id], references: [id])
+  component_id Int
+
+  @@id([user_id, component_id])
+}
+
+model ComponentProperties {
+  id             Int        @id @default(autoincrement())
+  property_name  String
+  property_value String
+  component_id   Int
+  component      Components @relation(fields: [component_id], references: [id])
+}
+
+model ComponentSubtype {
+  id           Int            @id @default(autoincrement())
+  subtype_name String
+  type_id      Int?
+  type         ComponentType? @relation(fields: [type_id], references: [id])
+  components   Components[]
+}
+
+model ComponentType {
+  id               Int                @id @default(autoincrement())
+  type_name        String
+  type_description String
+  type_image       String
+  subtypes         ComponentSubtype[]
+}
