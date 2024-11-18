@@ -18,8 +18,29 @@ const {
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Новый маршрут для получения всех категорий без подкатегорий
+app.get('/categoriesType', async (req, res) => {
+  try {
+    // Получаем все записи из таблицы ComponentType без подкатегорий
+    const categories = await prisma.componentType.findMany({
+      select: {
+        id: true, // ID категории
+        type_name: true, // Название категории
+        type_description: true, // Описание категории
+        type_image: true, // Изображение категории
+      }
+    });
+
+    // Отправляем данные обратно на мобильное приложение
+    res.json(categories); // Возвращаем список категорий в формате JSON
+  } catch (error) {
+    console.error('Ошибка при получении категорий:', error);
+    res.status(500).send('Не удалось получить категории');
+  }
+});
+
 // Новый маршрут для проксирования PDF
-app.get('/proxy', async (req, res) => {
+app.get('/getPDF', async (req, res) => {
   const pdfUrl = req.query.url; // Получаем URL PDF из параметра запроса
 
   if (!pdfUrl) {
