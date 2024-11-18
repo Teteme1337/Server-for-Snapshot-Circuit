@@ -16,7 +16,7 @@ const {
 } = require('./ONNX');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 4000;
 
 // Новый маршрут для проксирования PDF
 app.get('/proxy', async (req, res) => {
