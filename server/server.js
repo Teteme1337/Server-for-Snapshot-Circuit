@@ -88,6 +88,32 @@ app.get('/components/:subtypeId', async (req, res) => {
   }
 });
 
+app.get('/component/:id', async (req, res) => {
+  const { id } = req.params; // Получаем ID компонента из URL
+
+  try {
+    // Ищем компонент в базе данных по ID
+    const component = await prisma.components.findUnique({
+      where: { id: parseInt(id) }, // Ищем компонент по ID
+      include: {
+        component_properties: true,
+        subtype: true,
+      },
+    });
+
+    // Если компонент не найден, возвращаем ошибку
+    if (!component) {
+      return res.status(404).send('Компонент не найден');
+    }
+
+    // Отправляем компонент в ответ
+    res.json(component);
+  } catch (error) {
+    console.error('Ошибка при получении компонента:', error);
+    res.status(500).send('Ошибка на сервере');
+  }
+});
+
 // Новый маршрут для проксирования PDF
 app.get('/getPDF', async (req, res) => {
   const pdfUrl = req.query.url; // Получаем URL PDF из параметра запроса
@@ -129,7 +155,7 @@ process.on('SIGINT', async () => {
 // Запуск сервера
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
-  await getComponent(1);
+  //await getComponent(1);
   // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
   // const catalogImageUrls = [
   // 'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
