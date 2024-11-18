@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "npm install canvas && node server/server.js"
+    "start": "node server/server.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +13,7 @@
     "@tensorflow-models/mobilenet": "^2.1.1",
     "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.7.7",
+    "canvas": "^2.11.2",
     "cheerio": "^1.0.0",
     "cli-color": "^2.0.4",
     "db": "^6.0.3",
