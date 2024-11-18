@@ -18,26 +18,48 @@ const {
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Новый маршрут для получения всех категорий без подкатегорий
-app.get('/categoriesType', async (req, res) => {
+// Новый маршрут для получения категорий с подкатегориями
+app.get('/componentType', async (req, res) => {
   try {
-    // Получаем все записи из таблицы ComponentType без подкатегорий
+    // Получаем все записи из таблицы ComponentType с подкатегориями
     const categories = await prisma.componentType.findMany({
-      select: {
-        id: true, // ID категории
-        type_name: true, // Название категории
-        type_description: true, // Описание категории
-        type_image: true, // Изображение категории
-      }
+      include: {
+        subtypes: true, // Включаем подкатегории
+      },
     });
 
     // Отправляем данные обратно на мобильное приложение
-    res.json(categories); // Возвращаем список категорий в формате JSON
+    res.json(categories); // Возвращаем список категорий с подкатегориями в формате JSON
   } catch (error) {
     console.error('Ошибка при получении категорий:', error);
     res.status(500).send('Не удалось получить категории');
   }
 });
+
+// Получение типа компонента по ID
+app.get('/componentType/:id', async (req, res) => {
+  const { id } = req.params; // Получаем ID типа компонента из URL
+
+  try {
+    const componentType = await prisma.componentType.findUnique({
+      where: { id: parseInt(id) }, // Ищем тип по ID
+      include: {
+        subtypes: true, // Включаем подтипы, если нужно
+      },
+    });
+
+    if (!componentType) {
+      return res.status(404).send('Тип компонента не найден');
+    }
+
+    // Отправляем информацию о типе компонента
+    res.json(componentType);
+  } catch (error) {
+    console.error('Ошибка при получении типа компонента:', error);
+    res.status(500).send('Ошибка на сервере');
+  }
+});
+
 
 // Новый маршрут для проксирования PDF
 app.get('/getPDF', async (req, res) => {
