@@ -60,6 +60,33 @@ app.get('/componentType/:id', async (req, res) => {
   }
 });
 
+// Эндпоинт для получения компонентов по id подтипа
+app.get('/components/:subtypeId', async (req, res) => {
+  const { subtypeId } = req.params;
+
+  try {
+      // Запрос в базу данных для получения всех компонентов для данного подтипа
+      const components = await prisma.components.findMany({
+          where: {
+              subtype_id: parseInt(subtypeId),
+          },
+          include: {
+              component_properties: true, // если нужно включить свойства компонентов
+              subtype: true, // если нужно включить информацию о подтипе
+          },
+      });
+
+      if (components.length === 0) {
+          return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
+      }
+
+      // Возвращаем компоненты
+      res.json(components);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Ошибка на сервере" });
+  }
+});
 
 // Новый маршрут для проксирования PDF
 app.get('/getPDF', async (req, res) => {
