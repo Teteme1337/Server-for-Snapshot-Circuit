@@ -11,6 +11,10 @@ const {
   getComponent,
 } = require('./db');
 
+const {
+  findMostSimilarImage
+} = require('./ONNX');
+
 const app = express();
 const PORT = 3000;
 
@@ -55,5 +59,18 @@ process.on('SIGINT', async () => {
 // Запуск сервера
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
-  getComponent(1);
+  //await getComponent(1);
+  const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
+  const catalogImageUrls = [
+  'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
+  'https://static.chipdip.ru/lib/642/DOC001642695.jpg',
+  'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
+  'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
+  'https://static.chipdip.ru/lib/221/DOC001221953.jpg'
+  ];
+
+  // Вызов функции для поиска самого похожего изображения
+  await findMostSimilarImage(userImageUrl, catalogImageUrls).then(result => {
+      console.log('Most similar image:', result);
+  });
 });
