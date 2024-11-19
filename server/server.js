@@ -138,48 +138,28 @@ app.get('/getPDF', async (req, res) => {
   }
 });
 
-// Запуск Prisma Studio на порту
+// Маршрут для запуска Prisma Studio
 app.get('/prisma-studio', (req, res) => {
-  const studioPort = 5559; // Порт, который нужно использовать для Prisma Studio
-
-  // Попытка освободить порт
-  exec(`fuser -k ${studioPort}/tcp`, (err, stdout, stderr) => {
-    if (err) {
-      console.error(`Ошибка при освобождении порта: ${err.message}`);
-      console.error(`Дополнительные данные: ${stderr}`);
-      // Возможно, утилита fuser не установлена. Можно попробовать через kill.
-      exec(`lsof -i :${studioPort} | awk 'NR>1 {print $2}' | xargs kill -9`, (err2, stdout2, stderr2) => {
-        if (err2) {
-          console.error(`Ошибка при завершении процесса с портом ${studioPort}: ${err2.message}`);
-          res.status(500).send(`Не удалось освободить порт и запустить Prisma Studio: ${err2.message}`);
-          return;
-        }
-
-        console.log(`Порт ${studioPort} освобожден с помощью kill.`);
-      });
+  exec('npx prisma studio --port=5555', (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Ошибка запуска Prisma Studio: ${error.message}`);
+      return res.status(500).send('Ошибка при запуске Prisma Studio');
     }
-
-    // Запуск Prisma Studio
-    exec(`npx prisma studio --port ${studioPort}`, (err3, stdout3, stderr3) => {
-      if (err3) {
-        console.error(`Ошибка при запуске Prisma Studio: ${err3.message}`);
-        console.error(`Дополнительные данные: ${stderr3}`);
-        res.status(500).send(`Не удалось запустить Prisma Studio: ${err3.message}`);
-        return;
-      }
-      console.log(`Prisma Studio запущен на порту ${studioPort}`);
-      res.send(`Prisma Studio запущен на порту ${studioPort}, откройте его в браузере.`);
-    });
+    if (stderr) {
+      console.error(`Stderr: ${stderr}`);
+    }
+    console.log(`Stdout: ${stdout}`);
+    res.send('Prisma Studio запущена на http://localhost:5555');
   });
 });
 
-// async function startParsers() {
-//   console.log('Запуск обновления данных...');
-//   updateTypes();
-//   updateSubtypes();
-//   updateProperties();
-//   updateComponents();
-// }
+async function startParsers() {
+  console.log('Запуск обновления данных...');
+  updateTypes();
+  updateSubtypes();
+  updateProperties();
+  updateComponents();
+}
 
 // Закрытие соединения с базой данных при завершении работы сервера
 process.on('SIGINT', async () => {
