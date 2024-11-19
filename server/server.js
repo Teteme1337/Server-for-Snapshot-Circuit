@@ -139,9 +139,6 @@ app.get('/getPDF', async (req, res) => {
   }
 });
 
-const net = require('net');
-const { exec } = require('child_process');
-
 // Функция проверки, свободен ли порт
 function findFreePort(startPort = 5558) {
   return new Promise((resolve, reject) => {
