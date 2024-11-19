@@ -137,14 +137,16 @@ app.get('/getPDF', async (req, res) => {
   }
 });
 
-// Добавляем эндпоинт для получения ссылки на Prisma Studio
-app.get('/get-prisma-studio-link', (req, res) => {
-  const host = process.env.PUBLIC_SERVER_URL || 'https://server-for-snapshot-circuit-jfru.onrender.com';
-  
-  const studioPort = 5555; // Укажите правильный порт, на котором запущен Prisma Studio
-  
-  const studioUrl = `${host}:${studioPort}`;
-  res.json({ studioUrl });
+app.get('/prisma-studio', (req, res) => {
+  exec('npx prisma studio', (err, stdout) => {
+      if (err) {
+          console.error(`Ошибка при запуске Prisma Studio: ${err}`);
+          res.status(500).send('Не удалось запустить Prisma Studio');
+          return;
+      }
+      console.log(`Prisma Studio запущен: ${stdout}`);
+      res.send('Prisma Studio запущен, откройте его в браузере.');
+  });
 });
 
 // async function startParsers() {
