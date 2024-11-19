@@ -140,7 +140,7 @@ app.get('/getPDF', async (req, res) => {
 
 // Маршрут для запуска Prisma Studio
 app.get('/prisma-studio', (req, res) => {
-  exec('npx prisma studio --port=5555', (error, stdout, stderr) => {
+  exec('npx prisma studio --port=10001', (error, stdout, stderr) => {
     if (error) {
       console.error(`Ошибка запуска Prisma Studio: ${error.message}`);
       return res.status(500).send('Ошибка при запуске Prisma Studio');
