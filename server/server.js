@@ -137,6 +137,18 @@ app.get('/getPDF', async (req, res) => {
   }
 });
 
+// Добавляем эндпоинт для получения ссылки на Prisma Studio
+app.get('/get-prisma-studio-link', (req, res) => {
+  const host = req.hostname; // Получаем хост из запроса
+  const port = process.env.PORT || 5555; // Порт, на котором работает Prisma Studio (по умолчанию 5555)
+
+  // Генерируем ссылку
+  const studioUrl = `http://${host}:${port}`;
+
+  // Возвращаем ссылку на Prisma Studio
+  res.json({ studioUrl });
+});
+
 // async function startParsers() {
 //   console.log('Запуск обновления данных...');
 //   updateTypes();
@@ -155,7 +167,7 @@ process.on('SIGINT', async () => {
 // Запуск сервера
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
-  //await getComponent(1);
+  // await getComponent(1);
   // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
   // const catalogImageUrls = [
   // 'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
