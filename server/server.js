@@ -139,15 +139,16 @@ app.get('/getPDF', async (req, res) => {
 });
 
 app.get('/prisma-studio', (req, res) => {
-  exec('npx prisma studio', (err, stdout, stderr) => {
+  const studioPort = 5559; // Используйте порт, который точно свободен
+  exec(`npx prisma studio --port ${studioPort}`, (err, stdout, stderr) => {
     if (err) {
       console.error(`Ошибка при запуске Prisma Studio: ${err.message}`);
       console.error(`Дополнительные данные: ${stderr}`);
       res.status(500).send(`Не удалось запустить Prisma Studio: ${err.message}`);
       return;
     }
-    console.log(`Prisma Studio запущен: ${stdout}`);
-    res.send('Prisma Studio запущен, откройте его в браузере.');
+    console.log(`Prisma Studio запущен на порту ${studioPort}`);
+    res.send(`Prisma Studio запущен на порту ${studioPort}, откройте его в браузере.`);
   });
 });
 
