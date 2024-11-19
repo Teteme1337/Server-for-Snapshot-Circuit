@@ -1,5 +1,6 @@
 const express = require('express');
-const axios = require('axios');  // Добавляем axios для скачивания файлов
+const axios = require('axios');
+const { exec } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();  // Инициализация Prisma Client
 
