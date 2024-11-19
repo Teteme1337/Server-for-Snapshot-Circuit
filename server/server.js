@@ -138,20 +138,40 @@ app.get('/getPDF', async (req, res) => {
   }
 });
 
+const { exec } = require('child_process');
+
 // Запуск Prisma Studio на порту
 app.get('/prisma-studio', (req, res) => {
   const studioPort = 5559; // Порт, который нужно использовать для Prisma Studio
 
-  // Освобождаем порт и запускаем Prisma Studio
-  exec(`lsof -i :${studioPort} | awk 'NR>1 {print $2}' | xargs kill -9 && npx prisma studio --port ${studioPort}`, (err, stdout, stderr) => {
+  // Попытка освободить порт
+  exec(`fuser -k ${studioPort}/tcp`, (err, stdout, stderr) => {
     if (err) {
-      console.error(`Ошибка при запуске Prisma Studio: ${err.message}`);
+      console.error(`Ошибка при освобождении порта: ${err.message}`);
       console.error(`Дополнительные данные: ${stderr}`);
-      res.status(500).send(`Не удалось запустить Prisma Studio: ${err.message}`);
-      return;
+      // Возможно, утилита fuser не установлена. Можно попробовать через kill.
+      exec(`lsof -i :${studioPort} | awk 'NR>1 {print $2}' | xargs kill -9`, (err2, stdout2, stderr2) => {
+        if (err2) {
+          console.error(`Ошибка при завершении процесса с портом ${studioPort}: ${err2.message}`);
+          res.status(500).send(`Не удалось освободить порт и запустить Prisma Studio: ${err2.message}`);
+          return;
+        }
+
+        console.log(`Порт ${studioPort} освобожден с помощью kill.`);
+      });
     }
-    console.log(`Prisma Studio запущен на порту ${studioPort}`);
-    res.send(`Prisma Studio запущен на порту ${studioPort}, откройте его в браузере.`);
+
+    // Запуск Prisma Studio
+    exec(`npx prisma studio --port ${studioPort}`, (err3, stdout3, stderr3) => {
+      if (err3) {
+        console.error(`Ошибка при запуске Prisma Studio: ${err3.message}`);
+        console.error(`Дополнительные данные: ${stderr3}`);
+        res.status(500).send(`Не удалось запустить Prisma Studio: ${err3.message}`);
+        return;
+      }
+      console.log(`Prisma Studio запущен на порту ${studioPort}`);
+      res.send(`Prisma Studio запущен на порту ${studioPort}, откройте его в браузере.`);
+    });
   });
 });
 
