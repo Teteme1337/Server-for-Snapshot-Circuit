@@ -138,8 +138,6 @@ app.get('/getPDF', async (req, res) => {
   }
 });
 
-const { exec } = require('child_process');
-
 // Запуск Prisma Studio на порту
 app.get('/prisma-studio', (req, res) => {
   const studioPort = 5559; // Порт, который нужно использовать для Prisma Studio
