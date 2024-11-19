@@ -139,13 +139,11 @@ app.get('/getPDF', async (req, res) => {
 
 // Добавляем эндпоинт для получения ссылки на Prisma Studio
 app.get('/get-prisma-studio-link', (req, res) => {
-  const host = req.hostname; // Получаем хост из запроса
-  const port = process.env.PORT || 5555; // Порт, на котором работает Prisma Studio (по умолчанию 5555)
-
-  // Генерируем ссылку
-  const studioUrl = `http://${host}:${port}`;
-
-  // Возвращаем ссылку на Prisma Studio
+  const host = process.env.PUBLIC_SERVER_URL || 'https://server-for-snapshot-circuit-jfru.onrender.com';
+  
+  const studioPort = 5555; // Укажите правильный порт, на котором запущен Prisma Studio
+  
+  const studioUrl = `${host}:${studioPort}`;
   res.json({ studioUrl });
 });
 
