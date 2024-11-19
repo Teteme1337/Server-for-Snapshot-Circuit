@@ -1,7 +1,6 @@
 const express = require('express');
 const axios = require('axios');
 const { exec } = require('child_process');
-const net = require('net');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();  // Инициализация Prisma Client
 
@@ -139,53 +138,21 @@ app.get('/getPDF', async (req, res) => {
   }
 });
 
-// Функция проверки, свободен ли порт
-function findFreePort(startPort = 5558) {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
+// Запуск Prisma Studio на порту
+app.get('/prisma-studio', (req, res) => {
+  const studioPort = 5559; // Порт, который нужно использовать для Prisma Studio
 
-    server.once('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        resolve(false); // Порт занят
-      } else {
-        reject(err); // Другая ошибка
-      }
-    });
-
-    server.once('listening', () => {
-      const port = server.address().port;
-      server.close(() => resolve(port)); // Порт свободен
-    });
-
-    server.listen(startPort);
-  });
-}
-
-// Маршрут для запуска Prisma Studio
-app.get('/prisma-studio', async (req, res) => {
-  try {
-    const freePort = await findFreePort(); // Ищем свободный порт
-    if (!freePort) {
-      res.status(500).send('Не удалось найти свободный порт');
+  // Освобождаем порт и запускаем Prisma Studio
+  exec(`lsof -i :${studioPort} | awk 'NR>1 {print $2}' | xargs kill -9 && npx prisma studio --port ${studioPort}`, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`Ошибка при запуске Prisma Studio: ${err.message}`);
+      console.error(`Дополнительные данные: ${stderr}`);
+      res.status(500).send(`Не удалось запустить Prisma Studio: ${err.message}`);
       return;
     }
-
-    console.log(`Свободный порт найден: ${freePort}`);
-    exec(`npx prisma studio --port ${freePort}`, (err, stdout, stderr) => {
-      if (err) {
-        console.error(`Ошибка при запуске Prisma Studio: ${err.message}`);
-        console.error(`Дополнительные данные: ${stderr}`);
-        res.status(500).send(`Не удалось запустить Prisma Studio: ${err.message}`);
-        return;
-      }
-
-      console.log(`Prisma Studio запущен на порту ${freePort}`);
-      res.send(`Prisma Studio запущен на порту ${freePort}, откройте его в браузере.`);
-    });
-  } catch (error) {
-    console.error(`Ошибка при поиске свободного порта: ${error.message}`);
-    res.status(500).send('Ошибка на сервере');
-  }
+    console.log(`Prisma Studio запущен на порту ${studioPort}`);
+    res.send(`Prisma Studio запущен на порту ${studioPort}, откройте его в браузере.`);
+  });
 });
 
 // async function startParsers() {
