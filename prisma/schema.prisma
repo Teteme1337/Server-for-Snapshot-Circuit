@@ -12,7 +12,6 @@ model Users {
   id                 Int                  @id @default(autoincrement())
   email              String
   password           String
-  avatar             String?
   favorite_component FavoriteComponents[]
 }
 

@@ -149,9 +149,64 @@ app.get('/prisma-studio', (req, res) => {
       console.error(`Stderr: ${stderr}`);
     }
     console.log(`Stdout: ${stdout}`);
-    res.send('Prisma Studio запущена на http://localhost:5555');
+    res.send('Prisma Studio запущена на http://localhost:10001');
   });
 });
+
+// Вход
+app.post('/login', async (req, res) => {
+  try {
+      const { email, password } = req.body;
+
+      const user = await prisma.users.findFirst({
+          where: {
+              email: email,
+              password: password,
+          },
+      });
+
+      // Если пользователь найден
+      if (user) {
+          res.json({ success: true });
+      } else {
+          res.json({ success: false });
+      }
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+// Регистрация
+app.post('/register', async (req, res) => {
+  try {
+      const { email, password } = req.body; // Получение email и password из тела запроса
+
+      // Проверяем, существует ли пользователь с указанным email
+      const existingUser = await prisma.users.findFirst({
+          where: { email: email },
+      });
+
+      if (existingUser) {
+          // Если пользователь уже существует
+          res.json({ success: false, message: 'Пользователь с таким email уже существует' });
+      } else {
+          // Если пользователь не найден, создаем нового
+          await prisma.users.create({
+              data: {
+                  email: email,
+                  password: password, // Важно: пароли должны храниться в зашифрованном виде
+              },
+          });
+
+          res.json({ success: true, message: 'Регистрация успешна' });
+      }
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
 
 async function startParsers() {
   console.log('Запуск обновления данных...');
@@ -171,7 +226,7 @@ process.on('SIGINT', async () => {
 // Запуск сервера
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
-  // await getComponent(1);
+  //await getComponent(1);
   // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
   // const catalogImageUrls = [
   // 'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
