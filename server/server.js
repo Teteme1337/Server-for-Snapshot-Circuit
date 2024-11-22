@@ -208,6 +208,50 @@ app.post('/register', async (req, res) => {
   }
 });
 
+app.post('/favorites/toggle', async (req, res) => {
+  const { user_id, component_id } = req.body; // Получаем user_id и component_id из тела запроса
+
+  if (!user_id || !component_id) {
+      return res.status(400).json({ success: false, message: 'Отсутствует user_id или component_id' });
+  }
+
+  try {
+      // Проверяем, существует ли запись
+      const favorite = await prisma.favoriteComponents.findUnique({
+          where: {
+              user_id_component_id: { // Составной первичный ключ
+                  user_id: user_id,
+                  component_id: component_id,
+              },
+          },
+      });
+
+      if (favorite) {
+          // Если запись существует, удаляем её
+          await prisma.favoriteComponents.delete({
+              where: {
+                  user_id_component_id: {
+                      user_id: user_id,
+                      component_id: component_id,
+                  },
+              },
+          });
+          return res.json({ success: true, message: 'Удалено из избранного' });
+      } else {
+          // Если записи нет, создаем её
+          await prisma.favoriteComponents.create({
+              data: {
+                  user_id: user_id,
+                  component_id: component_id,
+              },
+          });
+          return res.json({ success: true, message: 'Добавлено в избранное' });
+      }
+  } catch (error) {
+      console.error('Ошибка:', error);
+      return res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
 
 async function startParsers() {
   console.log('Запуск обновления данных...');
