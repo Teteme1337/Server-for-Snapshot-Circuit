@@ -5,6 +5,7 @@ const path = require('path');
 
 const modelPath = path.join(__dirname, 'models', 'adv_inception_v3_Opset18.onnx');
 
+// Функция для загрузки изображения из URL и преобразования его в Base64
 async function loadImageFromURL(imageUrl) {
     const response = await axios({
         url: imageUrl,
@@ -19,6 +20,7 @@ async function loadImageFromURL(imageUrl) {
     return canvas;
 }
 
+// Функция для загрузки модели
 async function loadModel() {
     const session = await ort.InferenceSession.create(modelPath);
     console.log("Model inputs:", session.inputNames);
@@ -26,6 +28,7 @@ async function loadModel() {
     return session;
 }
 
+// Функция для преобразования изображения в тензор
 async function imageToTensor(imageUrl) {
     const canvas = await loadImageFromURL(imageUrl);
 
@@ -47,6 +50,7 @@ async function imageToTensor(imageUrl) {
     return tensor;
 }
 
+// Функция для извлечения признаков изображения
 async function extractFeatures(model, imageUrl) {
     const inputTensor = await imageToTensor(imageUrl);
     const feeds = { x: inputTensor };
@@ -55,6 +59,7 @@ async function extractFeatures(model, imageUrl) {
     return outputTensor.data;
 }
 
+// Функция для вычисления косинусного сходства между двумя тензорами
 function cosineSimilarity(tensor1, tensor2) {
     const dotProduct = tensor1.reduce((sum, value, i) => sum + value * tensor2[i], 0);
     const norm1 = Math.sqrt(tensor1.reduce((sum, value) => sum + value * value, 0));
@@ -62,25 +67,42 @@ function cosineSimilarity(tensor1, tensor2) {
     return dotProduct / (norm1 * norm2);
 }
 
+// Функция для конвертации изображения в Base64
+async function imageToBase64(imageUrl) {
+    const response = await axios({
+        url: imageUrl,
+        responseType: 'arraybuffer',
+    });
+    const buffer = Buffer.from(response.data);
+    return buffer.toString('base64');
+}
+
+// Функция для нахождения наиболее похожего изображения
 async function findMostSimilarImage(targetImageUrl, imageUrls) {
     const model = await loadModel();
     const targetFeatures = await extractFeatures(model, targetImageUrl);
     let bestMatchIndex = -1; // Индекс наиболее похожего изображения
     let maxSimilarity = -Infinity;
 
+    // Перебираем все изображения в массиве
     for (let i = 0; i < imageUrls.length; i++) {
         const imageUrl = imageUrls[i];
-        const currentFeatures = await extractFeatures(model, imageUrl);
+        
+        // Конвертируем каждое изображение в Base64
+        const base64ImageUrl = await imageToBase64(imageUrl);
+        console.log(`Image converted to Base64: ${base64ImageUrl}`);
+
+        const currentFeatures = await extractFeatures(model, base64ImageUrl);
         const similarity = cosineSimilarity(targetFeatures, currentFeatures);
         console.log(`Similarity between ${targetImageUrl} and ${imageUrl}:`, similarity);
 
         if (similarity > maxSimilarity) {
             maxSimilarity = similarity;
-            bestMatchIndex = i; // Сохранение индекса вместо URL
+            bestMatchIndex = i; // Сохраняем индекс наиболее похожего изображения
         }
     }
 
-    return bestMatchIndex; // Возвращаем индекс
+    return bestMatchIndex; // Возвращаем индекс наиболее похожего изображения
 }
 
 module.exports = {
