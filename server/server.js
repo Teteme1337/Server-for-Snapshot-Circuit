@@ -253,6 +253,48 @@ app.post('/favorites/toggle', async (req, res) => {
   }
 });
 
+// Эндпоинт для получения всех понравившихся компонентов пользователя
+app.get('/favorites/:user_id', async (req, res) => {
+  const { user_id } = req.params;
+
+  try {
+      // Запрос в базу данных для получения понравившихся компонентов пользователя
+      const favoriteComponents = await prisma.favoriteComponents.findMany({
+          where: {
+              user_id: parseInt(user_id),
+          },
+          include: {
+              component: {
+                  include: {
+                      component_properties: true, // Подключаем свойства компонентов, если нужно
+                      subtype: true, // Подключаем информацию о подтипе, если нужно
+                  },
+              },
+          },
+      });
+
+      if (favoriteComponents.length === 0) {
+          return res.status(404).json({ message: "Нет понравившихся компонентов" });
+      }
+
+      // Формируем ответ, включающий данные о компонентах
+      const response = favoriteComponents.map(favorite => ({
+          component_id: favorite.component.component_id,
+          title: favorite.component.title,
+          description: favorite.component.description,
+          image: favorite.component.componentPhoto,
+          documentationName: favorite.component.documentationName,
+          properties: favorite.component.component_properties, // Свойства компонента
+          subtype: favorite.component.subtype, // Информация о подтипе
+      }));
+
+      res.json(response); // Возвращаем сформированный ответ
+  } catch (error) {
+      console.error("Ошибка на сервере:", error);
+      res.status(500).json({ error: "Ошибка на сервере" });
+  }
+});
+
 async function startParsers() {
   console.log('Запуск обновления данных...');
   updateTypes();
