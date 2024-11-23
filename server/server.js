@@ -208,38 +208,53 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// app.post('/find-most-similar', async (req, res) => {
+//   const { targetImageUrl } = req.body;
+
+//   if (!targetImageUrl) {
+//       return res.status(400).json({ error: 'URL изображения обязателен.' });
+//   } else {
+//     console.log(targetImageUrl);
+//   }
+
+
+//   try {
+//       // Извлечение изображений из таблицы Components
+
+//       const components = await prisma.components.findMany({
+//           select: {
+//               component_photo: true, // Берём только URL изображения
+//           },
+//       });
+
+//       // Создание массива URL-ов
+//       const imageUrls = components.map(component => component.component_photo);
+
+//       // Используем findMostSimilarImage для поиска наиболее похожего
+//       const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
+
+//       // Возвращаем только индекс
+//       return res.json(mostSimilarIndex+1);
+//   } catch (error) {
+//       console.error('Ошибка при обработке запроса:', error);
+//       return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
+//   }
+// });
+
 app.post('/find-most-similar', async (req, res) => {
   const { targetImageUrl } = req.body;
 
   if (!targetImageUrl) {
       return res.status(400).json({ error: 'URL изображения обязателен.' });
-  } else {
-    console.log(targetImageUrl);
   }
 
-  
-  // try {
-  //     // Извлечение изображений из таблицы Components
+  // Выводим Base64 строку в консоль
+  console.log("Base64 Image: ", targetImageUrl);
 
-  //     const components = await prisma.components.findMany({
-  //         select: {
-  //             component_photo: true, // Берём только URL изображения
-  //         },
-  //     });
-
-  //     // Создание массива URL-ов
-  //     const imageUrls = components.map(component => component.component_photo);
-
-  //     // Используем findMostSimilarImage для поиска наиболее похожего
-  //     const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
-
-  //     // Возвращаем только индекс
-  //     return res.json(mostSimilarIndex+1);
-  // } catch (error) {
-  //     console.error('Ошибка при обработке запроса:', error);
-  //     return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
-  // }
+  // Отправляем успешный ответ
+  res.status(200).json({ message: "Base64 изображение получено!" });
 });
+
 
 async function startParsers() {
   console.log('Запуск обновления данных...');
