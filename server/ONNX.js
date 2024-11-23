@@ -5,17 +5,20 @@ const path = require('path');
 
 const modelPath = path.join(__dirname, 'models', 'adv_inception_v3_Opset18.onnx');
 
-// Функция для загрузки изображения из Base64
-async function loadImageFromBase64(base64) {
-    const imgBuffer = Buffer.from(base64, 'base64');
-    const img = await loadImage(imgBuffer);
+async function loadImageFromURL(imageUrl) {
+    const response = await axios({
+        url: imageUrl,
+        responseType: 'arraybuffer',
+    });
+
+    const buffer = Buffer.from(response.data);
+    const img = await loadImage(buffer);
     const canvas = createCanvas(img.width, img.height);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
     return canvas;
 }
 
-// Функция для загрузки модели
 async function loadModel() {
     const session = await ort.InferenceSession.create(modelPath);
     console.log("Model inputs:", session.inputNames);
@@ -23,18 +26,8 @@ async function loadModel() {
     return session;
 }
 
-// Функция для преобразования изображения в тензор
-async function imageToTensor(imageUrlOrBase64) {
-    let canvas;
-
-    if (imageUrlOrBase64.startsWith('data:image/')) {
-        // Если передан Base64
-        canvas = await loadImageFromBase64(imageUrlOrBase64);
-    } else {
-        // Если передан URL
-        const canvasFromUrl = await loadImageFromURL(imageUrlOrBase64);
-        canvas = canvasFromUrl;
-    }
+async function imageToTensor(imageUrl) {
+    const canvas = await loadImageFromURL(imageUrl);
 
     const TARGET_SIZE = 299;
     const resizedCanvas = createCanvas(TARGET_SIZE, TARGET_SIZE);
@@ -54,16 +47,14 @@ async function imageToTensor(imageUrlOrBase64) {
     return tensor;
 }
 
-// Функция для извлечения признаков изображения
-async function extractFeatures(model, imageUrlOrBase64) {
-    const inputTensor = await imageToTensor(imageUrlOrBase64);
+async function extractFeatures(model, imageUrl) {
+    const inputTensor = await imageToTensor(imageUrl);
     const feeds = { x: inputTensor };
     const output = await model.run(feeds);
     const outputTensor = output['875'];
     return outputTensor.data;
 }
 
-// Функция для вычисления косинусного сходства между двумя тензорами
 function cosineSimilarity(tensor1, tensor2) {
     const dotProduct = tensor1.reduce((sum, value, i) => sum + value * tensor2[i], 0);
     const norm1 = Math.sqrt(tensor1.reduce((sum, value) => sum + value * value, 0));
@@ -71,28 +62,25 @@ function cosineSimilarity(tensor1, tensor2) {
     return dotProduct / (norm1 * norm2);
 }
 
-// Функция для нахождения наиболее похожего изображения
-async function findMostSimilarImage(targetImageUrlOrBase64, imageUrlsOrBase64) {
+async function findMostSimilarImage(targetImageUrl, imageUrls) {
     const model = await loadModel();
-    const targetFeatures = await extractFeatures(model, targetImageUrlOrBase64);
+    const targetFeatures = await extractFeatures(model, targetImageUrl);
     let bestMatchIndex = -1; // Индекс наиболее похожего изображения
     let maxSimilarity = -Infinity;
 
-    // Перебираем все изображения в массиве
-    for (let i = 0; i < imageUrlsOrBase64.length; i++) {
-        const imageUrlOrBase64 = imageUrlsOrBase64[i];
-
-        const currentFeatures = await extractFeatures(model, imageUrlOrBase64);
+    for (let i = 0; i < imageUrls.length; i++) {
+        const imageUrl = imageUrls[i];
+        const currentFeatures = await extractFeatures(model, imageUrl);
         const similarity = cosineSimilarity(targetFeatures, currentFeatures);
-        console.log(`Similarity between target image and image ${i}:`, similarity);
+        console.log(`Similarity between ${targetImageUrl} and ${imageUrl}:`, similarity);
 
         if (similarity > maxSimilarity) {
             maxSimilarity = similarity;
-            bestMatchIndex = i; // Сохраняем индекс наиболее похожего изображения
+            bestMatchIndex = i; // Сохранение индекса вместо URL
         }
     }
 
-    return bestMatchIndex; // Возвращаем индекс наиболее похожего изображения
+    return bestMatchIndex; // Возвращаем индекс
 }
 
 module.exports = {

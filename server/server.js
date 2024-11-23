@@ -213,28 +213,31 @@ app.post('/find-most-similar', async (req, res) => {
 
   if (!targetImageUrl) {
       return res.status(400).json({ error: 'URL изображения обязателен.' });
+  } else {
+    console.log(targetImageUrl);
   }
 
-  try {
-      // Извлечение изображений из таблицы Components
-      const components = await prisma.components.findMany({
-          select: {
-              component_photo: true, // Берём только URL изображения
-          },
-      });
+  // try {
+  //     // Извлечение изображений из таблицы Components
 
-      // Создание массива URL-ов
-      const imageUrls = components.map(component => component.component_photo);
+  //     const components = await prisma.components.findMany({
+  //         select: {
+  //             component_photo: true, // Берём только URL изображения
+  //         },
+  //     });
 
-      // Используем findMostSimilarImage для поиска наиболее похожего
-      const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
+  //     // Создание массива URL-ов
+  //     const imageUrls = components.map(component => component.component_photo);
 
-      // Возвращаем только индекс
-      return res.json(mostSimilarIndex+1);
-  } catch (error) {
-      console.error('Ошибка при обработке запроса:', error);
-      return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
-  }
+  //     // Используем findMostSimilarImage для поиска наиболее похожего
+  //     const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
+
+  //     // Возвращаем только индекс
+  //     return res.json(mostSimilarIndex+1);
+  // } catch (error) {
+  //     console.error('Ошибка при обработке запроса:', error);
+  //     return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
+  // }
 });
 
 async function startParsers() {

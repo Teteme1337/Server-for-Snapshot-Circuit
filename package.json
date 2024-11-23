@@ -14,7 +14,6 @@
     "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.7.7",
     "cheerio": "^1.0.0",
-    "canvas": "^2.11.2",
     "child_process": "^1.0.2",
     "cli-color": "^2.0.4",
     "db": "^6.0.3",
