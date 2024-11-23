@@ -230,7 +230,7 @@ app.post('/find-most-similar', async (req, res) => {
       const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
 
       // Возвращаем только индекс
-      return res.json(mostSimilarIndex);
+      return res.json(mostSimilarIndex+1);
   } catch (error) {
       console.error('Ошибка при обработке запроса:', error);
       return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
@@ -256,17 +256,17 @@ process.on('SIGINT', async () => {
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
   //await getComponent(1);
-  const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
-  const catalogImageUrls = [
-  'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
-  'https://static.chipdip.ru/lib/642/DOC001642695.jpg',
-  'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
-  'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
-  'https://static.chipdip.ru/lib/221/DOC001221953.jpg'
-  ];
+  // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
+  // const catalogImageUrls = [
+  // 'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
+  // 'https://static.chipdip.ru/lib/642/DOC001642695.jpg',
+  // 'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
+  // 'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
+  // 'https://static.chipdip.ru/lib/221/DOC001221953.jpg'
+  // ];
 
-  // Вызов функции для поиска самого похожего изображения
-  await findMostSimilarImage(userImageUrl, catalogImageUrls).then(result => {
-      console.log('Most similar image:', result);
-  });
+  // // Вызов функции для поиска самого похожего изображения
+  // await findMostSimilarImage(userImageUrl, catalogImageUrls).then(result => {
+  //     console.log('Most similar image:', result);
+  // });
 });
