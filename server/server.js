@@ -116,23 +116,21 @@ app.get('/component/:id', async (req, res) => {
   }
 });
 
-// Новый маршрут для проксирования PDF
+// маршрут для проксирования PDF
 app.get('/getPDF', async (req, res) => {
-  const pdfUrl = req.query.url; // Получаем URL PDF из параметра запроса
+  const pdfUrl = req.query.url; 
 
   if (!pdfUrl) {
     return res.status(400).send('URL параметр не передан');
   }
 
   try {
-    // Запрос к удаленному серверу, чтобы получить PDF
     const response = await axios.get(pdfUrl, {
-      responseType: 'arraybuffer', // Получаем файл как массив байтов
+      responseType: 'arraybuffer',
     });
 
-    // Отправляем файл обратно с правильным MIME типом
     res.set('Content-Type', 'application/pdf');
-    res.send(response.data); // Отправляем данные файла в ответ
+    res.send(response.data);
   } catch (error) {
     console.error('Ошибка при скачивании PDF:', error);
     res.status(500).send('Не удалось загрузить PDF');
