@@ -217,6 +217,7 @@ app.post('/find-most-similar', async (req, res) => {
     console.log(targetImageUrl);
   }
 
+  
   // try {
   //     // Извлечение изображений из таблицы Components
 
