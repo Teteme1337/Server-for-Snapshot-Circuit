@@ -209,89 +209,37 @@ app.post('/register', async (req, res) => {
 });
 
 app.post('/favorites/toggle', async (req, res) => {
-  const { user_id, component_id } = req.body; // Получаем user_id и component_id из тела запроса
-
-  if (!user_id || !component_id) {
-      return res.status(400).json({ success: false, message: 'Отсутствует user_id или component_id' });
-  }
+  const { userId, componentId } = req.body;
 
   try {
-      // Проверяем, существует ли запись
-      const favorite = await prisma.favoriteComponents.findUnique({
+      // Проверяем, есть ли запись в избранном
+      const existingFavorite = await prisma.favoriteComponents.findUnique({
           where: {
-              user_id_component_id: { // Составной первичный ключ
-                  user_id: user_id,
-                  component_id: component_id,
-              },
-          },
+              user_id_component_id: { user_id: userId, component_id: componentId }
+          }
       });
 
-      if (favorite) {
-          // Если запись существует, удаляем её
+      if (existingFavorite) {
+          // Если запись есть, удаляем её
           await prisma.favoriteComponents.delete({
               where: {
-                  user_id_component_id: {
-                      user_id: user_id,
-                      component_id: component_id,
-                  },
-              },
+                  user_id_component_id: { user_id: userId, component_id: componentId }
+              }
           });
-          return res.json({ success: true, message: 'Удалено из избранного' });
+          res.json({ success: true, isLiked: false, message: "Компонент удалён из избранного" });
       } else {
-          // Если записи нет, создаем её
+          // Если записи нет, добавляем её
           await prisma.favoriteComponents.create({
               data: {
-                  user_id: user_id,
-                  component_id: component_id,
-              },
+                  user_id: userId,
+                  component_id: componentId
+              }
           });
-          return res.json({ success: true, message: 'Добавлено в избранное' });
+          res.json({ success: true, isLiked: true, message: "Компонент добавлен в избранное" });
       }
   } catch (error) {
-      console.error('Ошибка:', error);
-      return res.status(500).json({ success: false, message: 'Ошибка сервера' });
-  }
-});
-
-// Эндпоинт для получения всех понравившихся компонентов пользователя
-app.get('/favorites/:user_id', async (req, res) => {
-  const { user_id } = req.params;
-
-  try {
-      // Запрос в базу данных для получения понравившихся компонентов пользователя
-      const favoriteComponents = await prisma.favoriteComponents.findMany({
-          where: {
-              user_id: parseInt(user_id),
-          },
-          include: {
-              component: {
-                  include: {
-                      component_properties: true, // Подключаем свойства компонентов, если нужно
-                      subtype: true, // Подключаем информацию о подтипе, если нужно
-                  },
-              },
-          },
-      });
-
-      if (favoriteComponents.length === 0) {
-          return res.status(404).json({ message: "Нет понравившихся компонентов" });
-      }
-
-      // Формируем ответ, включающий данные о компонентах
-      const response = favoriteComponents.map(favorite => ({
-          component_id: favorite.component.component_id,
-          title: favorite.component.title,
-          description: favorite.component.description,
-          image: favorite.component.componentPhoto,
-          documentationName: favorite.component.documentationName,
-          properties: favorite.component.component_properties, // Свойства компонента
-          subtype: favorite.component.subtype, // Информация о подтипе
-      }));
-
-      res.json(response); // Возвращаем сформированный ответ
-  } catch (error) {
-      console.error("Ошибка на сервере:", error);
-      res.status(500).json({ error: "Ошибка на сервере" });
+      console.error(error);
+      res.status(500).json({ success: false, message: "Ошибка на сервере" });
   }
 });
 
