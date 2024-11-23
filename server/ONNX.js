@@ -65,21 +65,22 @@ function cosineSimilarity(tensor1, tensor2) {
 async function findMostSimilarImage(targetImageUrl, imageUrls) {
     const model = await loadModel();
     const targetFeatures = await extractFeatures(model, targetImageUrl);
-    let bestMatch = null;
+    let bestMatchIndex = -1; // Индекс наиболее похожего изображения
     let maxSimilarity = -Infinity;
 
-    for (const imageUrl of imageUrls) {
+    for (let i = 0; i < imageUrls.length; i++) {
+        const imageUrl = imageUrls[i];
         const currentFeatures = await extractFeatures(model, imageUrl);
         const similarity = cosineSimilarity(targetFeatures, currentFeatures);
         console.log(`Similarity between ${targetImageUrl} and ${imageUrl}:`, similarity);
 
         if (similarity > maxSimilarity) {
             maxSimilarity = similarity;
-            bestMatch = imageUrl;
+            bestMatchIndex = i; // Сохранение индекса вместо URL
         }
     }
 
-    return bestMatch;
+    return bestMatchIndex; // Возвращаем индекс
 }
 
 module.exports = {

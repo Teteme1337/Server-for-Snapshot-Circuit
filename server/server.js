@@ -208,57 +208,32 @@ app.post('/register', async (req, res) => {
   }
 });
 
-app.post('/favorites/toggle', async (req, res) => {
-  const { userId, componentId } = req.body;
+app.post('/find-most-similar', async (req, res) => {
+  const { targetImageUrl } = req.body;
+
+  if (!targetImageUrl) {
+      return res.status(400).json({ error: 'URL изображения обязателен.' });
+  }
 
   try {
-    // Проверяем существование пользователя
-    const user = await prisma.users.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return res.status(400).json({ error: 'Пользователь не найден' });
-    }
-
-    // Проверяем существование компонента
-    const component = await prisma.components.findUnique({
-      where: { id: componentId },
-    });
-
-    if (!component) {
-      return res.status(400).json({ error: 'Компонент не найден' });
-    }
-
-    // Проверяем, есть ли уже запись в избранном
-    const favorite = await prisma.favoriteComponents.findUnique({
-      where: {
-        user_id_component_id: { user_id: userId, component_id: componentId },
-      },
-    });
-
-    if (favorite) {
-      // Удаляем запись, если она уже есть
-      await prisma.favoriteComponents.delete({
-        where: {
-          user_id_component_id: { user_id: userId, component_id: componentId },
-        },
+      // Извлечение изображений из таблицы Components
+      const components = await prisma.components.findMany({
+          select: {
+              component_photo: true, // Берём только URL изображения
+          },
       });
-      return res.json({ success: true, message: 'Компонент удален из избранного' });
-    }
 
-    // Создаем новую запись
-    await prisma.favoriteComponents.create({
-      data: {
-        user_id: userId,
-        component_id: componentId,
-      },
-    });
+      // Создание массива URL-ов
+      const imageUrls = components.map(component => component.component_photo);
 
-    res.json({ success: true, message: 'Компонент добавлен в избранное' });
+      // Используем findMostSimilarImage для поиска наиболее похожего
+      const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
+
+      // Возвращаем только индекс
+      return res.json(mostSimilarIndex);
   } catch (error) {
-    console.error('Ошибка:', error);
-    res.status(500).json({ error: 'Ошибка на сервере' });
+      console.error('Ошибка при обработке запроса:', error);
+      return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
   }
 });
 
@@ -281,17 +256,17 @@ process.on('SIGINT', async () => {
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
   //await getComponent(1);
-  // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
-  // const catalogImageUrls = [
-  // 'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
-  // 'https://static.chipdip.ru/lib/642/DOC001642695.jpg',
-  // 'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
-  // 'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
-  // 'https://static.chipdip.ru/lib/221/DOC001221953.jpg'
-  // ];
+  const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
+  const catalogImageUrls = [
+  'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
+  'https://static.chipdip.ru/lib/642/DOC001642695.jpg',
+  'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
+  'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
+  'https://static.chipdip.ru/lib/221/DOC001221953.jpg'
+  ];
 
-  // // Вызов функции для поиска самого похожего изображения
-  // await findMostSimilarImage(userImageUrl, catalogImageUrls).then(result => {
-  //     console.log('Most similar image:', result);
-  // });
+  // Вызов функции для поиска самого похожего изображения
+  await findMostSimilarImage(userImageUrl, catalogImageUrls).then(result => {
+      console.log('Most similar image:', result);
+  });
 });
