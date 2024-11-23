@@ -255,6 +255,41 @@ app.post('/find-most-similar', async (req, res) => {
   res.status(200).json({ message: "Base64 изображение получено!" });
 });
 
+app.post('/like', async (req, res) => {
+  const { userId, componentId } = req.body;
+
+  // Проверяем, есть ли уже запись в базе данных
+  const existingFavorite = await prisma.favoriteComponents.findUnique({
+      where: {
+          user_id_component_id: {
+              user_id: userId,
+              component_id: componentId
+          }
+      }
+  });
+
+  if (existingFavorite) {
+      // Если запись существует, удаляем лайк
+      await prisma.favoriteComponents.delete({
+          where: {
+              user_id_component_id: {
+                  user_id: userId,
+                  component_id: componentId
+              }
+          }
+      });
+      return res.json({ message: 'Удалено из избранного' });
+  } else {
+      // Если записи нет, добавляем лайк
+      await prisma.favoriteComponents.create({
+          data: {
+              user_id: userId,
+              component_id: componentId
+          }
+      });
+      return res.json({ message: 'Добавлено в избранное' });
+  }
+});
 
 async function startParsers() {
   console.log('Запуск обновления данных...');
