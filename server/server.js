@@ -116,27 +116,6 @@ app.get('/component/:id', async (req, res) => {
   }
 });
 
-// маршрут для проксирования PDF
-app.get('/getPDF', async (req, res) => {
-  const pdfUrl = req.query.url; 
-
-  if (!pdfUrl) {
-    return res.status(400).send('URL параметр не передан');
-  }
-
-  try {
-    const response = await axios.get(pdfUrl, {
-      responseType: 'arraybuffer',
-    });
-
-    res.set('Content-Type', 'application/pdf');
-    res.send(response.data);
-  } catch (error) {
-    console.error('Ошибка при скачивании PDF:', error);
-    res.status(500).send('Не удалось загрузить PDF');
-  }
-});
-
 // Маршрут для запуска Prisma Studio
 app.get('/prisma-studio', (req, res) => {
   res.redirect('https://server-for-snapshot-circuit-admin.onrender.com');
@@ -245,6 +224,24 @@ app.post('/find-most-similar', async (req, res) => {
 
 app.post('/like', async (req, res) => {
   const { userId, componentId } = req.body;
+
+  // Проверяем, существует ли пользователь
+  const user = await prisma.users.findUnique({
+      where: { id: userId }
+  });
+
+  if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+  }
+
+  // Проверяем, существует ли компонент
+  const component = await prisma.components.findUnique({
+      where: { id: componentId }
+  });
+
+  if (!component) {
+      return res.status(404).json({ message: 'Компонент не найден' });
+  }
 
   // Проверяем, есть ли уже запись в базе данных
   const existingFavorite = await prisma.favoriteComponents.findUnique({
