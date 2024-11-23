@@ -212,34 +212,53 @@ app.post('/favorites/toggle', async (req, res) => {
   const { userId, componentId } = req.body;
 
   try {
-      // Проверяем, есть ли запись в избранном
-      const existingFavorite = await prisma.favoriteComponents.findUnique({
-          where: {
-              user_id_component_id: { user_id: userId, component_id: componentId }
-          }
-      });
+    // Проверяем существование пользователя
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+    });
 
-      if (existingFavorite) {
-          // Если запись есть, удаляем её
-          await prisma.favoriteComponents.delete({
-              where: {
-                  user_id_component_id: { user_id: userId, component_id: componentId }
-              }
-          });
-          res.json({ success: true, isLiked: false, message: "Компонент удалён из избранного" });
-      } else {
-          // Если записи нет, добавляем её
-          await prisma.favoriteComponents.create({
-              data: {
-                  user_id: userId,
-                  component_id: componentId
-              }
-          });
-          res.json({ success: true, isLiked: true, message: "Компонент добавлен в избранное" });
-      }
+    if (!user) {
+      return res.status(400).json({ error: 'Пользователь не найден' });
+    }
+
+    // Проверяем существование компонента
+    const component = await prisma.components.findUnique({
+      where: { id: componentId },
+    });
+
+    if (!component) {
+      return res.status(400).json({ error: 'Компонент не найден' });
+    }
+
+    // Проверяем, есть ли уже запись в избранном
+    const favorite = await prisma.favoriteComponents.findUnique({
+      where: {
+        user_id_component_id: { user_id: userId, component_id: componentId },
+      },
+    });
+
+    if (favorite) {
+      // Удаляем запись, если она уже есть
+      await prisma.favoriteComponents.delete({
+        where: {
+          user_id_component_id: { user_id: userId, component_id: componentId },
+        },
+      });
+      return res.json({ success: true, message: 'Компонент удален из избранного' });
+    }
+
+    // Создаем новую запись
+    await prisma.favoriteComponents.create({
+      data: {
+        user_id: userId,
+        component_id: componentId,
+      },
+    });
+
+    res.json({ success: true, message: 'Компонент добавлен в избранное' });
   } catch (error) {
-      console.error(error);
-      res.status(500).json({ success: false, message: "Ошибка на сервере" });
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка на сервере' });
   }
 });
 
