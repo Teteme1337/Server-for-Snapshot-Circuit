@@ -67,22 +67,36 @@ app.get('/components/:subtypeId', async (req, res) => {
   const { subtypeId } = req.params;
 
   try {
-      // Запрос в базу данных для получения всех компонентов для данного подтипа
-      const components = await prisma.components.findMany({
-          where: {
-              subtype_id: parseInt(subtypeId),
-          },
-          include: {
-              component_properties: true, // если нужно включить свойства компонентов
-              subtype: true, // если нужно включить информацию о подтипе
-          },
-      });
+      let components;
+      
+      if (parseInt(subtypeId) === -1) {
+          // Если subtypeId равно -1, получаем компоненты с id 1, 2 и 5
+          components = await prisma.components.findMany({
+              where: {
+                  id: { in: [1, 2, 5] }
+              },
+              include: {
+                  component_properties: true, // если нужно включить свойства компонентов
+                  subtype: true, // если нужно включить информацию о подтипе
+              },
+          });
+      } else {
+          // Обычный запрос по подтипу
+          components = await prisma.components.findMany({
+              where: {
+                  subtype_id: parseInt(subtypeId),
+              },
+              include: {
+                  component_properties: true,
+                  subtype: true,
+              },
+          });
+      }
 
       if (components.length === 0) {
           return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
       }
 
-      // Возвращаем компоненты
       res.json(components);
   } catch (error) {
       console.error(error);
