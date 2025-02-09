@@ -147,9 +147,9 @@ app.post('/login', async (req, res) => {
           },
       });
 
-      // Если пользователь найден
+      // Если пользователь найден, передаем его id
       if (user) {
-          res.json({ success: true });
+          res.json({ success: true, id: user.id });
       } else {
           res.json({ success: false });
       }
@@ -222,6 +222,8 @@ app.post('/register', async (req, res) => {
 //   }
 // });
 
+
+//поиск похожего
 app.post('/find-most-similar', async (req, res) => {
   const { targetImageUrl } = req.body;
 
@@ -236,6 +238,8 @@ app.post('/find-most-similar', async (req, res) => {
   res.status(200).json({ message: "Base64 изображение получено!" });
 });
 
+
+//лайк
 app.post('/like', async (req, res) => {
   const { userId, componentId } = req.body;
 
@@ -290,6 +294,8 @@ app.post('/like', async (req, res) => {
   }
 });
 
+
+//парсеринг
 async function startParsers() {
   console.log('Запуск обновления данных...');
   updateTypes();
@@ -308,6 +314,7 @@ process.on('SIGINT', async () => {
 // Запуск сервера
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
+
   //await getComponent(1);
   // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
   // const catalogImageUrls = [
