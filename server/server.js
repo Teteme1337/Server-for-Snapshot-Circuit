@@ -63,7 +63,7 @@ app.get('/componentType/:id', async (req, res) => {
 });
 
 // Эндпоинт для получения компонентов по id подтипа
-app.get('/components/:subtypeId', async (req, res) => {
+app.get('/componentSubtype/:subtypeId', async (req, res) => {
   const { subtypeId } = req.params;
 
   try {
@@ -294,6 +294,37 @@ app.post('/like', async (req, res) => {
   }
 });
 
+app.get('/liked/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+      const likedComponents = await prisma.favoriteComponents.findMany({
+          where: {
+              user_id: parseInt(userId),
+          },
+          include: {
+              component: {
+                  include: {
+                      component_properties: true,
+                      subtype: true,
+                  },
+              },
+          },
+      });
+
+      if (likedComponents.length === 0) {
+          return res.status(404).json({ message: "Пользователь не добавил компоненты в избранное" });
+      }
+
+      // Извлекаем только информацию о компонентах
+      const components = likedComponents.map(fav => fav.component);
+      
+      res.json(components);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Ошибка на сервере" });
+  }
+});
 
 //парсеринг
 async function startParsers() {
@@ -314,6 +345,17 @@ process.on('SIGINT', async () => {
 // Запуск сервера
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
+  
+    // await fetch('http://localhost:4000/like', {
+    //   method: 'POST',
+    //   headers: {
+    //       'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify({ userId: 1, componentId: 3 })
+    // })
+    // .then(response => response.json())
+    // .then(data => console.log(data))
+    // .catch(error => console.error('Ошибка:', error));
 
   //await getComponent(1);
   // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
