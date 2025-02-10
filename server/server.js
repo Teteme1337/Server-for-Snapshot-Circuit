@@ -24,7 +24,7 @@ const {
 } = require('./db');
 
 const {
-  findMostSimilarImage
+  findMostSimilarImages
 } = require('./ONNX');
 
 const app = express();
@@ -211,13 +211,42 @@ app.post('/register', async (req, res) => {
 // });
 
 app.post("/findMostSimilar", upload.single("image"), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).send("No file uploaded.");
-    }
+  if (!req.file) {
+      return res.status(400).send("No file uploaded.");
+  }
 
-    console.log("Received file:", req.file.path);
+  console.log("Received file:", req.file.path);
 
-    res.json(dummyResponse);
+  try {
+      // Загружаем список изображений из базы
+      const componentsPhoto = await prisma.components.findMany({
+        select: { id: true, component_photo: true },
+        take: 20
+      });
+
+      const imageUrls = componentsPhoto.map(c => c.component_photo);
+
+      // Получаем список похожих фото
+      const similarImages = await findMostSimilarImages(req.file.path, imageUrls);
+
+      // Получаем компоненты по найденным фото
+      const components = await prisma.components.findMany({
+          where: { component_photo: { in: similarImages } },
+          include: {
+              component_properties: true,
+              subtype: true,
+          },
+      });
+
+      if (components.length === 0) {
+          return res.status(404).json({ message: "Не найдено похожих компонентов" });
+      }
+
+      res.json(components);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Ошибка на сервере" });
+  }
 });
 
 //лайк
@@ -307,39 +336,6 @@ app.get('/liked/:userId', async (req, res) => {
   }
 });
 
-// app.post('/find-most-similar', async (req, res) => {
-//   const { targetImageUrl } = req.body;
-
-//   if (!targetImageUrl) {
-//       return res.status(400).json({ error: 'URL изображения обязателен.' });
-//   } else {
-//     console.log(targetImageUrl);
-//   }
-
-
-//   try {
-//       // Извлечение изображений из таблицы Components
-
-//       const components = await prisma.components.findMany({
-//           select: {
-//               component_photo: true, // Берём только URL изображения
-//           },
-//       });
-
-//       // Создание массива URL-ов
-//       const imageUrls = components.map(component => component.component_photo);
-
-//       // Используем findMostSimilarImage для поиска наиболее похожего
-//       const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
-
-//       // Возвращаем только индекс
-//       return res.json(mostSimilarIndex+1);
-//   } catch (error) {
-//       console.error('Ошибка при обработке запроса:', error);
-//       return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
-//   }
-// });
-
 //парсеринг
 async function startParsers() {
   console.log('Запуск обновления данных...');
@@ -359,30 +355,4 @@ process.on('SIGINT', async () => {
 // Запуск сервера
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
-  
-    // await fetch('http://localhost:4000/like', {
-    //   method: 'POST',
-    //   headers: {
-    //       'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify({ userId: 1, componentId: 3 })
-    // })
-    // .then(response => response.json())
-    // .then(data => console.log(data))
-    // .catch(error => console.error('Ошибка:', error));
-
-  //await getComponent(1);
-  // const userImageUrl = 'https://static.chipdip.ru/lib/531/DOC009531417.jpg';
-  // const catalogImageUrls = [
-  // 'https://static.chipdip.ru/lib/531/DOC009531417.jpg',
-  // 'https://static.chipdip.ru/lib/642/DOC001642695.jpg',
-  // 'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
-  // 'https://static.chipdip.ru/lib/304/DOC005304707.jpg',
-  // 'https://static.chipdip.ru/lib/221/DOC001221953.jpg'
-  // ];
-
-  // // Вызов функции для поиска самого похожего изображения
-  // await findMostSimilarImage(userImageUrl, catalogImageUrls).then(result => {
-  //     console.log('Most similar image:', result);
-  // });
 });
