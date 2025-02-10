@@ -186,60 +186,38 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// // Маршрут для поиска похожих компонентов с приемом изображения
-// app.post('/findMostSimilar', upload.single('image'), async (req, res) => {
-//   try {
-//     // Проверка, что изображение было загружено
-//     if (!req.file) {
-//       return res.status(400).json({ message: 'Изображение не загружено.' });
-//     }
+// //поиск похожего
+// app.get('/findMostSimilar/:image', async (req, res) => {
+//   try{
+//       components = await prisma.components.findMany({
+//           where: {
+//               id: { in: [1, 2, 5] }
+//           },
+//           include: {
+//               component_properties: true, // если нужно включить свойства компонентов
+//               subtype: true, // если нужно включить информацию о подтипе
+//           },
+//       });
 
-//     const imagePath = req.file.path; // Путь к загруженному файлу
+//       if (components.length === 0) {
+//         return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
+//       }
 
-//     // Ваша логика поиска похожих компонентов
-//     const components = await prisma.components.findMany({
-//       where: {
-//         id: { in: [1, 2, 5] }, // Пример фильтрации
-//       },
-//       include: {
-//         component_properties: true,
-//         subtype: true,
-//       },
-//     });
-
-//     if (components.length === 0) {
-//       return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
-//     }
-
-//     res.json(components); // Возвращаем найденные компоненты
+//     res.json(components);
 //   } catch (error) {
 //     console.error(error);
 //     res.status(500).json({ error: "Ошибка на сервере" });
 //   }
 // });
 
-//поиск похожего
-app.get('/findMostSimilar/:image', async (req, res) => {
-  try{
-      components = await prisma.components.findMany({
-          where: {
-              id: { in: [1, 2, 5] }
-          },
-          include: {
-              component_properties: true, // если нужно включить свойства компонентов
-              subtype: true, // если нужно включить информацию о подтипе
-          },
-      });
+app.post("/findMostSimilar", upload.single("image"), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).send("No file uploaded.");
+    }
 
-      if (components.length === 0) {
-        return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
-      }
+    console.log("Received file:", req.file.path);
 
-    res.json(components);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Ошибка на сервере" });
-  }
+    res.json(dummyResponse);
 });
 
 //лайк
