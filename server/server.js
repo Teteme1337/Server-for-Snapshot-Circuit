@@ -67,31 +67,17 @@ app.get('/componentSubtype/:subtypeId', async (req, res) => {
   const { subtypeId } = req.params;
 
   try {
-      let components;
-      
-      if (parseInt(subtypeId) === -1) {
-          // Если subtypeId равно -1, получаем компоненты с id 1, 2 и 5
-          components = await prisma.components.findMany({
-              where: {
-                  id: { in: [1, 2, 5] }
-              },
-              include: {
-                  component_properties: true, // если нужно включить свойства компонентов
-                  subtype: true, // если нужно включить информацию о подтипе
-              },
-          });
-      } else {
-          // Обычный запрос по подтипу
-          components = await prisma.components.findMany({
-              where: {
-                  subtype_id: parseInt(subtypeId),
-              },
-              include: {
-                  component_properties: true,
-                  subtype: true,
-              },
-          });
-      }
+      let components;  
+
+      components = await prisma.components.findMany({
+          where: {
+            subtype_id: parseInt(subtypeId),
+          },
+          include: {
+            component_properties: true,
+            subtype: true,
+         },
+      });
 
       if (components.length === 0) {
           return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
@@ -189,55 +175,29 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// app.post('/find-most-similar', async (req, res) => {
-//   const { targetImageUrl } = req.body;
-
-//   if (!targetImageUrl) {
-//       return res.status(400).json({ error: 'URL изображения обязателен.' });
-//   } else {
-//     console.log(targetImageUrl);
-//   }
-
-
-//   try {
-//       // Извлечение изображений из таблицы Components
-
-//       const components = await prisma.components.findMany({
-//           select: {
-//               component_photo: true, // Берём только URL изображения
-//           },
-//       });
-
-//       // Создание массива URL-ов
-//       const imageUrls = components.map(component => component.component_photo);
-
-//       // Используем findMostSimilarImage для поиска наиболее похожего
-//       const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
-
-//       // Возвращаем только индекс
-//       return res.json(mostSimilarIndex+1);
-//   } catch (error) {
-//       console.error('Ошибка при обработке запроса:', error);
-//       return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
-//   }
-// });
-
-
 //поиск похожего
-app.post('/find-most-similar', async (req, res) => {
-  const { targetImageUrl } = req.body;
+app.get('/findMostSimilar/:image', async (req, res) => {
+  try{
+      components = await prisma.components.findMany({
+          where: {
+              id: { in: [1, 2, 5] }
+          },
+          include: {
+              component_properties: true, // если нужно включить свойства компонентов
+              subtype: true, // если нужно включить информацию о подтипе
+          },
+      });
 
-  if (!targetImageUrl) {
-      return res.status(400).json({ error: 'URL изображения обязателен.' });
+      if (components.length === 0) {
+        return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
+      }
+
+    res.json(components);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Ошибка на сервере" });
   }
-
-  // Выводим Base64 строку в консоль
-  console.log("Base64 Image: ", targetImageUrl);
-
-  // Отправляем успешный ответ
-  res.status(200).json({ message: "Base64 изображение получено!" });
 });
-
 
 //лайк
 app.post('/like', async (req, res) => {
@@ -325,6 +285,39 @@ app.get('/liked/:userId', async (req, res) => {
       res.status(500).json({ error: "Ошибка на сервере" });
   }
 });
+
+// app.post('/find-most-similar', async (req, res) => {
+//   const { targetImageUrl } = req.body;
+
+//   if (!targetImageUrl) {
+//       return res.status(400).json({ error: 'URL изображения обязателен.' });
+//   } else {
+//     console.log(targetImageUrl);
+//   }
+
+
+//   try {
+//       // Извлечение изображений из таблицы Components
+
+//       const components = await prisma.components.findMany({
+//           select: {
+//               component_photo: true, // Берём только URL изображения
+//           },
+//       });
+
+//       // Создание массива URL-ов
+//       const imageUrls = components.map(component => component.component_photo);
+
+//       // Используем findMostSimilarImage для поиска наиболее похожего
+//       const mostSimilarIndex = await findMostSimilarImage(targetImageUrl, imageUrls);
+
+//       // Возвращаем только индекс
+//       return res.json(mostSimilarIndex+1);
+//   } catch (error) {
+//       console.error('Ошибка при обработке запроса:', error);
+//       return res.status(500).json({ error: 'Ошибка на сервере. Проверьте лог сервера.' });
+//   }
+// });
 
 //парсеринг
 async function startParsers() {
