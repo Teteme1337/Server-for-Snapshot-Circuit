@@ -2,6 +2,17 @@ const express = require('express');
 const axios = require('axios');
 const { exec } = require('child_process');
 const { PrismaClient } = require('@prisma/client');
+const multer = require('multer');
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Папка для хранения загруженных изображений
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Генерация уникального имени файла
+  },
+});
+const upload = multer({ storage: storage });
+const path = require('path');
 const prisma = new PrismaClient();  // Инициализация Prisma Client
 
 const {
@@ -175,24 +186,32 @@ app.post('/register', async (req, res) => {
   }
 });
 
-//поиск похожего
-app.get('/findMostSimilar/:image', async (req, res) => {
-  try{
-      components = await prisma.components.findMany({
-          where: {
-              id: { in: [1, 2, 5] }
-          },
-          include: {
-              component_properties: true, // если нужно включить свойства компонентов
-              subtype: true, // если нужно включить информацию о подтипе
-          },
-      });
+// Маршрут для поиска похожих компонентов с приемом изображения
+app.post('/findMostSimilar', upload.single('image'), async (req, res) => {
+  try {
+    // Проверка, что изображение было загружено
+    if (!req.file) {
+      return res.status(400).json({ message: 'Изображение не загружено.' });
+    }
 
-      if (components.length === 0) {
-        return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
-      }
+    const imagePath = req.file.path; // Путь к загруженному файлу
 
-    res.json(components);
+    // Ваша логика поиска похожих компонентов
+    const components = await prisma.components.findMany({
+      where: {
+        id: { in: [1, 2, 5] }, // Пример фильтрации
+      },
+      include: {
+        component_properties: true,
+        subtype: true,
+      },
+    });
+
+    if (components.length === 0) {
+      return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
+    }
+
+    res.json(components); // Возвращаем найденные компоненты
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Ошибка на сервере" });
