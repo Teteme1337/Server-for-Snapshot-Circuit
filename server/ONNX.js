@@ -1,23 +1,14 @@
-const ort = require('onnxruntime-node');
-const axios = require('axios');
-const { createCanvas, loadImage } = require('canvas');
 const path = require('path');
 const fs = require('fs');
+const ort = require('onnxruntime-node');
+const { createCanvas, loadImage } = require('canvas');
 const faiss = require('faiss-node');
 
 const modelPath = path.join(__dirname, 'models', 'adv_inception_v3_Opset18.onnx');
-const embeddingsPath = path.join(__dirname, 'image_embeddings.json');
+const photosDir = path.join(__dirname, 'photos');
 
-async function loadImageFromPathOrURL(imagePath) {
-    let img;
-    if (imagePath.startsWith('http')) {
-        const response = await axios({ url: imagePath, responseType: 'arraybuffer' });
-        const buffer = Buffer.from(response.data);
-        img = await loadImage(buffer);
-    } else {
-        img = await loadImage(imagePath); // Загружаем локальный файл
-    }
-
+async function loadImageFromFile(imagePath) {
+    const img = await loadImage(imagePath);
     const canvas = createCanvas(299, 299);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, 299, 299);
@@ -29,7 +20,7 @@ async function loadModel() {
 }
 
 async function imageToTensor(imagePath) {
-    const canvas = await loadImageFromPathOrURL(imagePath);
+    const canvas = await loadImageFromFile(imagePath);
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, 299, 299).data;
     const rgbData = [];
@@ -50,41 +41,29 @@ async function extractFeatures(model, imagePath) {
     return Array.from(output[model.outputNames[0]].data);
 }
 
-function saveEmbeddings(embeddings) {
-    fs.writeFileSync(embeddingsPath, JSON.stringify(embeddings));
-}
+async function buildFaissIndex(model) {
+    const imageFiles = fs.readdirSync(photosDir)
+        .filter(file => file.endsWith('.jpg'))
+        .map(file => path.join(photosDir, file));
 
-function loadEmbeddings() {
-    return fs.existsSync(embeddingsPath) ? JSON.parse(fs.readFileSync(embeddingsPath)) : {};
-}
-
-async function buildFaissIndex(model, imageUrls) {
-    let embeddings = loadEmbeddings();
-    let newImages = imageUrls.filter(url => !embeddings[url]);
-
-    if (newImages.length > 0) {
-        const newEmbeddings = await Promise.all(newImages.map(url => extractFeatures(model, url)));
-        newImages.forEach((url, i) => embeddings[url] = newEmbeddings[i]);
-        saveEmbeddings(embeddings);
-    }
-
-    const dimension = Object.values(embeddings)[0].length;
+    const embeddings = await Promise.all(imageFiles.map(file => extractFeatures(model, file)));
+    const dimension = embeddings[0].length;
     const index = new faiss.IndexFlatL2(dimension);
-    const data = Object.values(embeddings).flat();
+    const data = embeddings.flat();
     index.add(new Float32Array(data));
 
-    return { index, embeddings, imageUrls };
+    return { index, imageFiles };
 }
 
-async function findMostSimilarImages(targetImagePath, imageUrls, threshold = 0.65, maxResults = 10) {
+async function findMostSimilarImages(targetImagePath, threshold = 0.65, maxResults = 10) {
     const model = await loadModel();
-    const { index, imageUrls: dbImageUrls } = await buildFaissIndex(model, imageUrls);
+    const { index, imageFiles } = await buildFaissIndex(model);
     
     const targetFeatures = await extractFeatures(model, targetImagePath);
     const result = index.search(new Float32Array(targetFeatures), maxResults);
 
     return result.labels
-        .map(idx => dbImageUrls[idx]) // Преобразуем индексы в пути к изображениям
+        .map(idx => imageFiles[idx])
         .filter((_, i) => 1 / (1 + result.distances[i]) >= threshold);
 }
 

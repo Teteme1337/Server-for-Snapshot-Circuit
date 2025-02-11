@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const { exec } = require('child_process');
+const fs = require('fs'); // Import fs module for file operations
 const { PrismaClient } = require('@prisma/client');
 const multer = require('multer');
 const storage = multer.diskStorage({
@@ -352,7 +353,10 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-// Запуск сервера
-app.listen(PORT, async () => {
+
+//запуск сервера
+
+app.listen(PORT, () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
+  //downloadPhotos().catch(error => console.error('Ошибка загрузки фото:', error));
 });
