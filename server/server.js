@@ -15,19 +15,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 const path = require('path');
 const prisma = new PrismaClient();  // Инициализация Prisma Client
-
-const {
-  updateSubtypes,
-  updateTypes,
-  updateProperties,
-  updateComponents,
-  getComponent,
-} = require('./db');
-
-const {
-  findMostSimilarImages
-} = require('./ONNX');
-
+const ort = require('onnxruntime-node');
+const cliProgress = require('cli-progress');
+const { createCanvas, loadImage } = require('canvas');
 const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 4000;
@@ -211,37 +201,6 @@ app.post('/register', async (req, res) => {
 //   }
 // });
 
-app.post("/findMostSimilar", upload.single("image"), async (req, res) => {
-  if (!req.file) {
-      return res.status(400).send("No file uploaded.");
-  }
-
-  console.log("Received file:", req.file.path);
-
-  try {
-      // Получаем список похожих изображений из локальной папки
-      const similarImages = await findMostSimilarImages(req.file.path);
-
-      // Получаем компоненты по найденным изображениям
-      const components = await prismaClient.components.findMany({
-          where: { component_photo: { in: similarImages } },
-          include: {
-              component_properties: true,
-              subtype: true,
-          },
-      });
-
-      if (components.length === 0) {
-          return res.status(404).json({ message: "Не найдено похожих компонентов" });
-      }
-
-      res.json(components);
-  } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "Ошибка на сервере" });
-  }
-});
-
 //лайк
 app.post('/like', async (req, res) => {
   const { userId, componentId } = req.body;
@@ -329,15 +288,6 @@ app.get('/liked/:userId', async (req, res) => {
   }
 });
 
-//парсеринг
-async function startParsers() {
-  console.log('Запуск обновления данных...');
-  updateTypes();
-  updateSubtypes();
-  updateProperties();
-  updateComponents();
-}
-
 // Закрытие соединения с базой данных при завершении работы сервера
 process.on('SIGINT', async () => {
   await prisma.$disconnect();  // Закрытие соединения Prisma
@@ -346,9 +296,148 @@ process.on('SIGINT', async () => {
 });
 
 
-//запуск сервера
+const modelPath = path.join(__dirname, 'models', 'adv_inception_v3_Opset18.onnx');
+const photosDir = path.join(__dirname, 'photos');
 
-app.listen(PORT, () => {
+let model;
+let faissIndex;
+let imageFiles = [];
+
+// Функция загрузки модели
+async function loadModel() {
+    console.log("Загрузка модели...");
+    model = await ort.InferenceSession.create(modelPath);
+    console.log("Модель загружена.");
+}
+
+// Функция загрузки изображения и конвертации в тензор
+async function imageToTensor(imagePath) {
+    const img = await loadImage(imagePath);
+    const canvas = createCanvas(299, 299);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, 299, 299);
+    const imageData = ctx.getImageData(0, 0, 299, 299).data;
+    
+    const rgbData = [];
+    for (let i = 0; i < imageData.length; i += 4) {
+        rgbData.push((imageData[i] / 255 - 0.5) / 0.5);
+        rgbData.push((imageData[i + 1] / 255 - 0.5) / 0.5);
+        rgbData.push((imageData[i + 2] / 255 - 0.5) / 0.5);
+    }
+
+    return new ort.Tensor('float32', new Float32Array(rgbData), [1, 3, 299, 299]);
+}
+
+// Функция извлечения признаков изображения
+async function extractFeatures(imagePath) {
+    const inputTensor = await imageToTensor(imagePath);
+    const feeds = { [model.inputNames[0]]: inputTensor };
+    const output = await model.run(feeds);
+    return Array.from(output[model.outputNames[0]].data);
+}
+
+async function buildFaissIndex(model) {
+  console.log("Начинаем создание Faiss-индекса...");
+  const imageFiles = fs.readdirSync(photosDir)
+      .filter(file => file.endsWith('.jpg'))
+      .map(file => path.join(photosDir, file));
+
+  console.log(`Найдено ${imageFiles.length} изображений.`);
+
+  let embeddings = [];
+  const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+  progressBar.start(imageFiles.length, 0);
+  console.log("\n");
+
+  for (let i = 0; i < imageFiles.length; i++) {
+      try {
+          const feature = await extractFeatures(model, imageFiles[i]);
+          embeddings.push(feature);
+          progressBar.update(i + 1);
+      } catch (error) {
+          console.error(`Ошибка обработки изображения ${imageFiles[i]}:`, error);
+      }
+  }
+
+  progressBar.stop();
+  console.log("Все изображения обработаны!");
+
+  const dimension = embeddings[0].length;
+  const index = new faiss.IndexFlatL2(dimension);
+  const data = embeddings.flat();
+  index.add(new Float32Array(data));
+
+  console.log("Faiss-индекс успешно создан!");
+  return { index, imageFiles };
+}
+
+async function findMostSimilarImages(targetImagePath, threshold = 0.65, maxResults = 10) {
+    if (!fs.existsSync(targetImagePath)) {
+        throw new Error(`Изображение по пути ${targetImagePath} не найдено.`);
+    }
+
+    if (!faissIndex) {
+        throw new Error("Faiss-индекс не загружен!");
+    }
+
+    try {
+        // Извлекаем признаки для целевого изображения
+        const targetFeatures = await extractFeatures(targetImagePath);
+
+        // Ищем похожие изображения с использованием Faiss
+        const result = faissIndex.search(new Float32Array(targetFeatures), maxResults);
+
+        // Возвращаем список похожих изображений, удовлетворяющих порогу
+        return result.labels
+            .map(idx => imageFiles[idx])
+            .filter((_, i) => 1 / (1 + result.distances[i]) >= threshold);
+    } catch (error) {
+        console.error("Ошибка при поиске похожих изображений:", error);
+        throw new Error("Ошибка при обработке запроса на поиск похожих изображений.");
+    }
+}
+
+// Обработчик загрузки и поиска похожих изображений
+app.post("/findMostSimilar", upload.single("image"), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).send("No file uploaded.");
+    }
+
+    console.log("Received file:", req.file.path);
+
+    try {
+        const similarImages = await findMostSimilarImages(req.file.path);
+
+        if (similarImages.length === 0) {
+            return res.status(404).json({ message: "Не найдено похожих изображений" });
+        }
+
+        res.json(similarImages);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Ошибка на сервере" });
+    }
+});
+
+// Запуск сервера с предварительной загрузкой модели и индекса
+app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
-  //downloadPhotos().catch(error => console.error('Ошибка загрузки фото:', error));
+
+  try {
+      await loadModel(); // Загружаем модель
+      await buildFaissIndex(); // Создаем индекс
+
+      // // Тестируем findMostSimilarImages
+      // const testImagePath = "uploads/test.jpg";
+
+      // if (fs.existsSync(testImagePath)) {
+      //     console.log("Тестируем поиск похожих изображений...");
+      //     const result = await findMostSimilarImages(testImagePath);
+      //     console.log("Результаты теста:", result);
+      // } else {
+      //     console.log(`Файл для теста ${testImagePath} не найден.`);
+      // }
+  } catch (error) {
+      console.error("Ошибка инициализации:", error);
+  }
 });
