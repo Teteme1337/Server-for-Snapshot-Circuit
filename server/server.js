@@ -219,19 +219,11 @@ app.post("/findMostSimilar", upload.single("image"), async (req, res) => {
   console.log("Received file:", req.file.path);
 
   try {
-      // Загружаем список изображений из базы
-      const componentsPhoto = await prisma.components.findMany({
-        select: { id: true, component_photo: true },
-        take: 20
-      });
+      // Получаем список похожих изображений из локальной папки
+      const similarImages = await findMostSimilarImages(req.file.path);
 
-      const imageUrls = componentsPhoto.map(c => c.component_photo);
-
-      // Получаем список похожих фото
-      const similarImages = await findMostSimilarImages(req.file.path, imageUrls);
-
-      // Получаем компоненты по найденным фото
-      const components = await prisma.components.findMany({
+      // Получаем компоненты по найденным изображениям
+      const components = await prismaClient.components.findMany({
           where: { component_photo: { in: similarImages } },
           include: {
               component_properties: true,
