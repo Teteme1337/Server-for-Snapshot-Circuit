@@ -177,29 +177,29 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// //поиск похожего
-// app.get('/findMostSimilar/:image', async (req, res) => {
-//   try{
-//       components = await prisma.components.findMany({
-//           where: {
-//               id: { in: [1, 2, 5] }
-//           },
-//           include: {
-//               component_properties: true, // если нужно включить свойства компонентов
-//               subtype: true, // если нужно включить информацию о подтипе
-//           },
-//       });
+//поиск похожего
+app.get('/findMostSimilar/:image', async (req, res) => {
+  try{
+      components = await prisma.components.findMany({
+          where: {
+              id: { in: [1, 2, 5] }
+          },
+          include: {
+              component_properties: true, // если нужно включить свойства компонентов
+              subtype: true, // если нужно включить информацию о подтипе
+          },
+      });
 
-//       if (components.length === 0) {
-//         return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
-//       }
+      if (components.length === 0) {
+        return res.status(404).json({ message: "Нет компонентов для данного подтипа" });
+      }
 
-//     res.json(components);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Ошибка на сервере" });
-//   }
-// });
+    res.json(components);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Ошибка на сервере" });
+  }
+});
 
 //лайк
 app.post('/like', async (req, res) => {
@@ -397,47 +397,47 @@ async function findMostSimilarImages(targetImagePath, threshold = 0.65, maxResul
     }
 }
 
-// Обработчик загрузки и поиска похожих изображений
-app.post("/findMostSimilar", upload.single("image"), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).send("No file uploaded.");
-    }
+// // Обработчик загрузки и поиска похожих изображений
+// app.post("/findMostSimilar", upload.single("image"), async (req, res) => {
+//     if (!req.file) {
+//         return res.status(400).send("No file uploaded.");
+//     }
 
-    console.log("Received file:", req.file.path);
+//     console.log("Received file:", req.file.path);
 
-    try {
-        const similarImages = await findMostSimilarImages(req.file.path);
+//     try {
+//         const similarImages = await findMostSimilarImages(req.file.path);
 
-        if (similarImages.length === 0) {
-            return res.status(404).json({ message: "Не найдено похожих изображений" });
-        }
+//         if (similarImages.length === 0) {
+//             return res.status(404).json({ message: "Не найдено похожих изображений" });
+//         }
 
-        res.json(similarImages);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Ошибка на сервере" });
-    }
-});
+//         res.json(similarImages);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ error: "Ошибка на сервере" });
+//     }
+// });
 
 // Запуск сервера с предварительной загрузкой модели и индекса
 app.listen(PORT, async () => {
   console.log(`API сервер запущен на http://localhost:${PORT}`);
 
-  try {
-      await loadModel(); // Загружаем модель
-      await buildFaissIndex(); // Создаем индекс
+  // try {
+  //     await loadModel(); // Загружаем модель
+  //     await buildFaissIndex(); // Создаем индекс
 
-      // // Тестируем findMostSimilarImages
-      // const testImagePath = "uploads/test.jpg";
+  //     // Тестируем findMostSimilarImages
+  //     const testImagePath = "uploads/test.jpg";
 
-      // if (fs.existsSync(testImagePath)) {
-      //     console.log("Тестируем поиск похожих изображений...");
-      //     const result = await findMostSimilarImages(testImagePath);
-      //     console.log("Результаты теста:", result);
-      // } else {
-      //     console.log(`Файл для теста ${testImagePath} не найден.`);
-      // }
-  } catch (error) {
-      console.error("Ошибка инициализации:", error);
-  }
+  //     if (fs.existsSync(testImagePath)) {
+  //         console.log("Тестируем поиск похожих изображений...");
+  //         const result = await findMostSimilarImages(testImagePath);
+  //         console.log("Результаты теста:", result);
+  //     } else {
+  //         console.log(`Файл для теста ${testImagePath} не найден.`);
+  //     }
+  // } catch (error) {
+  //     console.error("Ошибка инициализации:", error);
+  // }
 });
