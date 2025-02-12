@@ -22,6 +22,14 @@ const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 4000;
 
+app.get("/healthcheck", (req, res) => {
+  res.status(200).send("OK");
+});
+
+app.get('/admin', (req, res) => {
+  res.send('https://server-for-snapshot-circuit-1.onrender.com');
+});
+
 // Новый маршрут для получения категорий с подкатегориями
 app.get('/componentType', async (req, res) => {
   try {
