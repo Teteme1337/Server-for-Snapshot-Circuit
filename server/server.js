@@ -27,7 +27,7 @@ app.get("/healthcheck", (req, res) => {
 });
 
 app.get('/admin', (req, res) => {
-  res.send('https://server-for-snapshot-circuit-1.onrender.com');
+  res.send('https://snapshot-circuit-admin.onrender.com');
 });
 
 // Новый маршрут для получения категорий с подкатегориями
